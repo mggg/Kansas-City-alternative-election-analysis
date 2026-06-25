@@ -145,7 +145,7 @@ def main():
     print("=" * 60)
     
     # Paths
-    gpkg_path = "../../data/BETA_release_packages/mo_districtr_vtd_view_v1.gpkg"
+    gpkg_path = "data/BETA_release_packages/mo_districtr_vtd_view_v1.gpkg"
     output_path = "data/kcmo_districts_vtd.gpkg"
     
     # Load data
