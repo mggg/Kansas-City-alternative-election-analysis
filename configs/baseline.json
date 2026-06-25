@@ -1,7 +1,7 @@
 {
   "run_name": "kansas_city_run",
 
-  "geodata_path": "data/sample.geojson",
+  "geodata_path": "./data/kcmo_districts_vtd.gpkg",
 
   "gerrychain_output_dir": "outputs/districts/chain_out",
 
@@ -17,10 +17,7 @@
   "epsilon": 0.05,
 
 "district_configs": [
-    { "num_districts": 12, "winners": 3 },
-    { "num_districts": 6, "winners": 3 },
-  { "num_districts": 4, "winners": 3 },
-  { "num_districts": 3, "winners": 3 }
+    { "num_districts": 12, "winners": 3 }
 ],
 
   "turnout": { "A": 0.15, "B": 0.15},
