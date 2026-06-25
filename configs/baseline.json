@@ -8,7 +8,7 @@
   "population_column": "total_pop_20",
   "pop_of_interest_column": "white_vap_20",
 
-  "chain_length": 1000,
+  "chain_length": 100000,
 
   "num_subsamples": 5,
 
@@ -25,7 +25,7 @@
 
   "turnout": { "A": 0.15, "B": 0.15},
 
-  "num_voters": 214000,
+  "num_voters": 500,
 
   "slate_to_candidates": {
     "A": ["A1", "A2", "A3", "A4", "A5"],

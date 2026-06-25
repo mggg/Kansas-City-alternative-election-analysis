@@ -45,8 +45,21 @@ from gerrychain.constraints import within_percent_of_ideal_population
 
 # Missouri VTD Data
 gdf_missouri = gpd.read_file("./data/mo_districtr_vtd_view_v1.gpkg",layer="mo_districtr_vtd_view_v1")
+districts = gpd.read_file("./data/kcmo_districts.geojson").to_crs(gdf_missouri.crs)
+
+proj_crs = gdf_missouri.estimate_utm_crs()
+vtd_rep_points = gdf_missouri.to_crs(proj_crs).copy()
+vtd_rep_points["geometry"] = vtd_rep_points.geometry.representative_point()
+
 # Kansas City VTD Data
-gdf = gdf_missouri.loc[gdf_missouri["path"].str[4:9] == "29095",:]
+matched = vtd_rep_points.sjoin(districts.to_crs(proj_crs), how="inner", predicate="within")
+gdf = gdf_missouri.loc[matched.index]
+
+# Kansas City VTD Data
+# gdf = gdf_missouri.loc[gdf_missouri["path"].str[4:9] == "29095",:]
+# print(f"Initial CRS: {gdf.crs}")
+# gdf = gdf.to_crs("EPSG:26915")
+# print(f"Set CRS: {gdf.crs}")
 
 # Data
 print(f"Columns:{gdf.columns.to_list()}\n")
@@ -54,7 +67,7 @@ print(f"Number of precints: {gdf.shape[0]}\n")
 print(f"Number of columns: {gdf.shape[1]}\n")
 
 # Transform geopandas to graph object
-graph = Graph.from_geodataframe(gdf) # crs_override, how do I define the CRS?
+graph = Graph.from_geodataframe(gdf)
 
 # Export
 GRAPH_PATH = BASE_DIR / "../outputs/graph/kc_vtd_graph.json"
@@ -127,7 +140,7 @@ def run_chain(
         )
 
     if target_population is None:
-        target_population = sum(initial_partition["population"].values()) / n_districts
+        target_population = sum(initial_partition["population"].values()) / len(initial_partition)
 
     constraints = [
         within_percent_of_ideal_population(initial_partition, epsilon)
@@ -137,7 +150,8 @@ def run_chain(
         recom,
         pop_col=population_attr,
         pop_target=target_population,
-        epsilon=epsilon
+        epsilon=epsilon,
+        node_repeats= 2 # added to prevent stucks at chain
     )
 
     # Create the Markov chain
@@ -158,6 +172,9 @@ def run_chain(
                 {
                     "assignment": list(step.assignment.to_series().sort_index()),
                     "sample": i + 1,
+                    "poc_vap": {str(d): step["POCVAP20"][d] for d in step.parts},
+                    "vap": {str(d): step["VAP20"][d] for d in step.parts},
+                    "population": {str(d): step["population"][d] for d in step.parts},
                 }
             )
 
@@ -165,7 +182,7 @@ def run_chain(
 if __name__ == "__main__":
 
     for n_district in N_DISTRICTS:
-        print(f"Starting District: {n_district}")
+        print(f"-------Starting District-size: {n_district}--------")
         output_file = f"../{parameters["gerrychain_output_dir"]}/{RUN_NAME}_{n_district}.json"
         OUTPUT_FILE = BASE_DIR / output_file
         OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -178,4 +195,4 @@ if __name__ == "__main__":
             rng_seed=RNG_SEED,
             output_file=OUTPUT_FILE
         )
-        print(f"Finishing District: {n_district}")
+        print(f"--------Finishing District-size: {n_district}----------")
