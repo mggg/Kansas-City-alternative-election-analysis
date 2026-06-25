@@ -1,10 +1,6 @@
-#!/usr/bin/env python3
 """
 Kansas City VTDs Data Generator
-Generates geopackage of VTDs for Kansas City using spatial join + clip
-
-Usage:
-    python data_generator.py
+Generates geopackage of VTDs for Kansas City using spatial join and clip
 """
 
 import geopandas as gpd
@@ -87,7 +83,7 @@ def print_statistics(kc_vtds):
     print("=" * 60)
     
     # Project to UTM for correct area calculation
-    kc_vtds_utm = kc_vtds.to_crs(kc_vtds.estimate_utm_crs())
+    kc_vtds_utm = kc_vtds.to_crs("EPSG:26915")
     
     print(f"\n Geography:")
     print(f"  Total VTDs: {len(kc_vtds)}")
