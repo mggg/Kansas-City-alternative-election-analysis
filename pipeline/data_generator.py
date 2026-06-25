@@ -43,15 +43,8 @@ def load_data(gpkg_path, kc_boundary_geoid="2938000"):
 def clip_and_filter(mo_vtds, kc_boundary, min_area_pct=0.01):
     """
     Clip VTDs to KC boundary and filter by minimum area
-    
-    Args:
-        mo_vtds: GeoDataFrame of Missouri VTDs
-        kc_boundary: GeoDataFrame of KC boundary
-        min_area_pct: Minimum area as percentage of median original (default: 1%)
-    
-    Returns:
-        kc_vtds_filtered: Filtered GeoDataFrame of VTDs
     """
+    print("\nClipping and filtering...")
     
     # Project to UTM for precision
     proj_crs = mo_vtds.estimate_utm_crs()
@@ -59,10 +52,12 @@ def clip_and_filter(mo_vtds, kc_boundary, min_area_pct=0.01):
     kc_boundary_utm = kc_boundary.to_crs(proj_crs)
     
     # Clip
-    kc_vtds_clip = gpd.clip(mo_vtds_utm, kc_boundary_utm).to_crs(epsg=4326)
+    print("  Clipping VTDs to boundary...")
+    kc_vtds_clip = gpd.clip(mo_vtds_utm, kc_boundary_utm)
     print(f"{len(kc_vtds_clip)} VTDs after clip")
     
-    # Filter by minimum area
+    # Filter by minimum area (BEFORE converting CRS)
+    print("  Filtering by minimum area...")
     original_areas = mo_vtds_utm.geometry.area
     min_area = original_areas.median() * min_area_pct
     
@@ -70,6 +65,12 @@ def clip_and_filter(mo_vtds, kc_boundary, min_area_pct=0.01):
     removed = len(kc_vtds_clip) - len(kc_vtds_filtered)
     print(f"{len(kc_vtds_filtered)} VTDs after filtering")
     print(f"{removed} VTDs removed (area < {min_area_pct*100:.0f}%)")
+    
+    # Convert to EPSG:4326 AFTER filtering
+    kc_vtds_filtered = kc_vtds_filtered.to_crs(epsg=4326)
+    
+    # Store the projected CRS for later use
+    kc_vtds_filtered.attrs['proj_crs'] = proj_crs
     
     return kc_vtds_filtered
 
@@ -82,9 +83,13 @@ def print_statistics(kc_vtds):
     print("KANSAS CITY STATISTICS")
     print("=" * 60)
     
-    # Project to UTM for correct area calculation
-    kc_vtds_utm = kc_vtds.to_crs("EPSG:26915")
-    
+    # Use stored projected CRS
+    proj_crs = kc_vtds.attrs.get('proj_crs')
+    if proj_crs:
+        kc_vtds_utm = kc_vtds.to_crs(proj_crs)
+    else:
+        kc_vtds_utm = kc_vtds
+
     print(f"\n Geography:")
     print(f"  Total VTDs: {len(kc_vtds)}")
     print(f"  Total area: {kc_vtds_utm.geometry.area.sum() / 1e6:.2f} km²")
