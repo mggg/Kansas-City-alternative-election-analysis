@@ -23,7 +23,7 @@ def load_config(config_path: str) -> dict:
 
 if __name__ == "__main__":
     # Load config
-    configurations = [load_config("configs/6_1_IRV.json")]#load_all_config_files()
+    configurations = load_all_config_files()
 
     for config in configurations:
         print(f"Run name: {config['run_name']}")

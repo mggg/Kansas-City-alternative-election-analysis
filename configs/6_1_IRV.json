@@ -8,13 +8,13 @@
   "population_column": "total_pop_20",
   "pop_of_interest_column": "white_vap_20",
 
-  "chain_length": 50000,
+  "chain_length": 1000,
 
   "num_subsamples": 5,
 
   "total_seats": 6,
 
-  "epsilon": 0.05,
+  "epsilon": 0.1,
 
   "voting_rules": [
     "IRV"

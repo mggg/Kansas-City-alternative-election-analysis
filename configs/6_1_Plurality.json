@@ -12,16 +12,16 @@
 
   "num_subsamples": 5,
 
-  "total_seats": 12,
+  "total_seats": 6,
 
-  "epsilon": 0.05,
+  "epsilon": 0.1,
 
   "voting_rules": [
-    "IRV"
+    "Plurality"
   ],
 
   "district_configs": [
-      { "num_districts": 12, "winners": 1 }
+      { "num_districts": 6, "winners": 1 }
   ],
 
   "turnout": { "A": 0.5, "B": 0.5},
