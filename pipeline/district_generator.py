@@ -93,7 +93,7 @@ def generate_districts(config):
         updaters=updaters,
         )
 
-    target_population = sum(initial_partition["population"].values()) / len(initial_partition)
+    target_population = sum(initial_partition["population"].values()) / n_district
 
     constraints = [
         within_percent_of_ideal_population(initial_partition, epsilon)
