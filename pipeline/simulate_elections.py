@@ -76,9 +76,9 @@ def _process_profile(profile_file: str | Path, n_seats: int, voting_rules: List[
     election_rules = _import_voting_rules_from_vote_kit(voting_rules)
     results = {}
 
-    for _, election in vars(election_rules).items():
+    for rule_type, election in vars(election_rules).items():
         elected = election(profile, m=n_seats, simultaneous=False, tiebreak='random').get_elected()
-        results[election.__class__.__name__] = _candidate_list_from_elected(elected)
+        results[rule_type] = _candidate_list_from_elected(elected)
 
     # if n_seats > 1:
     #     elected_stv = STV(profile, m=n_seats, simultaneous=False, tiebreak='random').get_elected()
@@ -150,7 +150,7 @@ def simulate_elections(config) -> None:
     # Use all available cores by default. Set SIMULATE_ELECTIONS_N_JOBS=1 to run
     # serially in the main process so breakpoints inside _process_profile are hit
     # under the debugger (joblib worker subprocesses are not debugged otherwise).
-    n_jobs = 1
+    n_jobs = -1
 
     out_root = Path("outputs") / f'{run_name}' / "election_results" 
     out_root.mkdir(parents=True, exist_ok=True)
@@ -174,16 +174,14 @@ def simulate_elections(config) -> None:
 
             if ctx is not None:
                 with ctx:
-                    # results_list = Parallel(n_jobs=n_jobs)(
-                    #     delayed(_process_profile)(pf, dc.winners, config["voting_rules"]) for pf in all_profile_files
-                    # )
-                    results_list = [_process_profile(pf, dc.winners, config["voting_rules"]) for pf in all_profile_files]
+                    results_list = Parallel(n_jobs=n_jobs)(
+                        delayed(_process_profile)(pf, dc.winners, config["voting_rules"]) for pf in all_profile_files
+                    )
             else:
                 print(f"[simulate_elections] {desc} (no joblib_progress installed)")
-                # results_list = Parallel(n_jobs=n_jobs)(
-                #     delayed(_process_profile)(pf, dc.winners, config["voting_rules"]) for pf in all_profile_files
-                # )
-                results_list = [_process_profile(pf, dc.winners, config["voting_rules"]) for pf in all_profile_files]
+                results_list = Parallel(n_jobs=n_jobs)(
+                    delayed(_process_profile)(pf, dc.winners, config["voting_rules"]) for pf in all_profile_files
+                )
 
 
             # write all winners for this district/mode combo to one json file
