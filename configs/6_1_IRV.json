@@ -12,7 +12,7 @@
 
   "num_subsamples": 5,
 
-  "total_seats": 3,
+  "total_seats": 6,
 
   "epsilon": 0.05,
 
@@ -21,12 +21,12 @@
   ],
 
   "district_configs": [
-      { "num_districts": 6, "winners": 3 }
+      { "num_districts": 6, "winners": 1 }
   ],
 
   "turnout": { "A": 0.5, "B": 0.5},
 
-  "num_voters": 412873,
+  "num_voters": 1000,
 
   "slate_to_candidates": {
     "A": ["A1", "A2", "A3", "A4", "A5"],

@@ -77,16 +77,12 @@ def _process_profile(profile_file: str | Path, n_seats: int, voting_rules: List[
     results = {}
 
     for rule_type, election in vars(election_rules).items():
-        elected = election(profile, m=n_seats, simultaneous=False, tiebreak='random').get_elected()
-        results[rule_type] = _candidate_list_from_elected(elected)
-
-    # if n_seats > 1:
-    #     elected_stv = STV(profile, m=n_seats, simultaneous=False, tiebreak='random').get_elected()
-    #     return {"stv": _candidate_list_from_elected(elected_stv)}
-    # else:
-    #     elected_plurality = Plurality(profile, m=1, tiebreak='random').get_elected()
-    #     elected_irv = STV(profile, m=n_seats, simultaneous=False, tiebreak='random').get_elected()
-    #     return {"stv": _candidate_list_from_elected(elected_plurality), "irv": _candidate_list_from_elected(elected_irv)}
+        if n_seats > 1:
+            elected = election(profile, m=n_seats, tiebreak='random').get_elected()
+            results[rule_type] = _candidate_list_from_elected(elected)
+        else:
+            elected = election(profile, tiebreak='random').get_elected()
+            results[rule_type] = _candidate_list_from_elected(elected)
 
     return results
 
