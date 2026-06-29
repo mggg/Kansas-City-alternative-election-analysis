@@ -64,10 +64,13 @@ def _process_profile(profile_file: str | Path, voting_configs: dict) -> List[str
 
     Args:
         profile_file: Path to the voter profile csv.
-        n_seats: Number of seats to fill in this election.
+        voting_configs: Election and voting settings specified in configuration files
 
     Returns:
         {[type]: [winner_ids]} e.g. { "stv": ["A2", "B1", "B3"] }
+
+    TO-DO: Figure out how to use RankProfile OR ScoreProfile for BlockPlurality if desired. 
+        Current default is RankProfile.
     """
     profile_path = Path(profile_file)
 
@@ -136,7 +139,7 @@ def _parse_district_configs(raw: Any) -> List[DistrictConfig]:
 
 def simulate_elections(config) -> None:
     """
-    run stv/plurality elections in parallel over all voter profiles.
+    Run elections in parallel over all voter profiles.
 
     Args:
         config: Parsed config dict.
