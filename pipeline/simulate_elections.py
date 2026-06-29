@@ -6,16 +6,12 @@ rule (STV for multi-seat districts, plurality and IRV for single-seat districts)
 and writes aggregated election results to JSON files.
 """
 
-from __future__ import annotations
 import json
 from glob import glob
 from pathlib import Path
 from joblib import Parallel, delayed
-from votekit import RankProfile
-from votekit.elections import FastSTV as STV, Plurality
-from typing import List, Iterable
-import importlib
-from types import SimpleNamespace
+from votekit import RankProfile, elections
+from typing import List, Iterable, Any
 from dataclasses import dataclass
 
 
@@ -35,9 +31,8 @@ class DistrictConfig:
 
 
 def _import_voting_rules_from_vote_kit(rules: str) -> dict:
-    election_lib = importlib.import_module("votekit.elections.election_types")
-    rules = {rule: getattr(election_lib, rule) for rule in rules}
-    return rules
+    classes = {rule: getattr(elections, rule) for rule in rules}
+    return classes
 
 
 def _candidate_list_from_elected(elected: Iterable[set]) -> List[str]:
@@ -59,15 +54,14 @@ def _candidate_list_from_elected(elected: Iterable[set]) -> List[str]:
 def _process_profile(profile_file: str | Path, n_seats: int, voting_configs: dict) -> List[str]:
     """
     Load a voter profile csv and run an election to determine winners.
-    uses stv for multi-seat races and plurality for single-seat races.
+    Dynamically load election classes based on voting_config settings
 
     Args:
         profile_file: Path to the voter profile csv.
         n_seats: Number of seats to fill in this election.
 
     Returns:
-        For n_seats > 1: {"stv": [winner ids]}
-        For n_seats == 1: {"plurality": [winner ids], "irv": [winner ids]}
+        {[type]: [winner_ids]} e.g. { "stv": ["A2", "B1", "B3"] }
     """
     profile_path = Path(profile_file)
     profile: RankProfile = RankProfile.from_csv(profile_path)
@@ -204,8 +198,3 @@ def simulate_elections(config) -> None:
                 )
 
             print(f"[simulate_elections] Wrote: {out_path}")
-
-
-if __name__ == '__main__':
-    from setup import setup_config
-    simulate_elections(setup_config())
