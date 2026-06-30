@@ -61,7 +61,7 @@ OUTPUT_PATH = DATA_DIR / "KC_blocks_vap_cvap.gpkg"
 # --------------------------------------------------------------------------- #
 # Census API key
 # --------------------------------------------------------------------------- #
-load_dotenv(PIPELINE_DIR / ".env")
+load_dotenv(".env")
 API_KEY = os.getenv("CENSUS_API_KEY")
 if not API_KEY:
     raise ValueError(

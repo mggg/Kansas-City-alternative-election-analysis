@@ -1,5 +1,5 @@
 {
-  "run_name": "Kansas_City_12X1_IRV",
+  "run_name": "Kansas_City_12X1",
 
   "geodata_path": "./data/KC_blocks_vap_cvap.gpkg",
 
@@ -17,7 +17,8 @@
   "epsilon": 0.05,
 
   "voting_configs": {
-    "IRV": { "tiebreak": "random" }
+    "IRV": { "tiebreak": "random" },
+    "Plurality": { "tiebreak": "random" }
   },
 
   "district_configs": [
