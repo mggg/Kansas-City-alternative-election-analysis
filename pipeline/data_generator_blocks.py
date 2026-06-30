@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Kansas City Blocks VAP / CVAP Data Generator
 =============================================
@@ -12,7 +11,7 @@ mutually-exclusive race/ethnicity categories:
 Pipeline:
     1. download_blocks()          TIGER/Line 2020 block geometries (KC counties)
     2. download_boundary()        Kansas City "place" polygon
-    3. download_pl_blocks()       PL 94-171 P3 + P4 tables per block
+    3. download_pl_blocks()       PL 94-171 P1 + P3 + P4 tables per block
     4. download_acs_citizenship() ACS 5-year B05003 citizenship rates per tract
     5. build_vap_categories()     partition VAP into the six categories
     6. build_cvap_categories()    per-block citizenship rate lookup (by tract)
@@ -25,7 +24,7 @@ loaded from disk instead of being re-downloaded.
 
 Sources:
     - TIGER/Line 2020: block & place geometries (census.gov)
-    - Census API PL 94-171 (Tables P3, P4): VAP at block level
+    - Census API PL 94-171 (Tables P1, P3, P4): total population + VAP at block level
     - Census API ACS 5-year (Table B05003): citizenship rates at tract level
 
 Methodology follows VAP-CVAP.pdf: VAP is partitioned exactly into six groups,
@@ -55,7 +54,7 @@ ACS_CACHE_DIR = DATA_DIR / "acs_tracts"
 # Cache files (lazy-loaded if present)
 BLOCKS_CACHE = DATA_DIR / "kcmo_blocks_raw.gpkg"
 BOUNDARY_CACHE = DATA_DIR / "kc_boundary.gpkg"
-PL_CACHE = DATA_DIR / "kcmo_pl_blocks_p3p4.parquet"
+PL_CACHE = DATA_DIR / "kcmo_pl_blocks_p1p3p4.parquet"
 OUTPUT_PATH = DATA_DIR / "KC_blocks_vap_cvap.gpkg"
 
 # --------------------------------------------------------------------------- #
@@ -103,11 +102,14 @@ CRS_WEBMAP = "EPSG:4326"                   # lat/lon for interactive maps
 TIGER = "https://www2.census.gov/geo/tiger/TIGER2020"
 
 # --------------------------------------------------------------------------- #
-# PL 94-171 variable inventory (P3 + P4, 71 rows each, lowercase)
+# PL 94-171 variable inventory
+# P1_001N = total population
+# P3/P4 = voting-age population by race/ethnicity
 # --------------------------------------------------------------------------- #
+P1_ALL = ["p1_001n"]
 P3_ALL = [f"p3_{i:03d}n" for i in range(1, 72)]
 P4_ALL = [f"p4_{i:03d}n" for i in range(1, 72)]
-RAW_VARS = P3_ALL + P4_ALL                 # 142 variables total
+RAW_VARS = P1_ALL + P3_ALL + P4_ALL        # 143 variables total
 
 # --------------------------------------------------------------------------- #
 # VAP category definitions (from VAP-CVAP.pdf)
@@ -306,23 +308,22 @@ def fetch_pl_blocks(client, variables, state_fips, counties, chunk_size=49):
 
 
 def download_pl_blocks(client=None, cache_path=PL_CACHE):
-    """Download (or load from cache) the P3/P4 PL table for every KC-county block.
-
+    """Download (or load from cache) the P1/P3/P4 PL table for every KC-county block.
     Args:
         client: Census client (defaults to a fresh PL-vintage client).
         cache_path: Parquet path used for lazy caching.
 
     Returns:
-        DataFrame indexed by block GEOID with the 142 P3/P4 variables.
+        DataFrame indexed by block GEOID with the 143 P1/P3/P4 variables.
     """
     cache_path = Path(cache_path)
     if cache_path.exists():
-        print("Loading P3/P4 data from cache …")
+        print("Loading P1/P3/P4 data from cache …")
         return pd.read_parquet(cache_path)
 
     if client is None:
         client = get_census_client(DECENNIAL_YEAR)
-    print("Downloading P3/P4 data from Census API (this takes ~2 minutes) …")
+    print("Downloading P1/P3/P4 data from Census API (this takes ~2 minutes) …")
     pl_blocks = fetch_pl_blocks(client, RAW_VARS, STATE_FIPS, KC_COUNTIES)
     cache_path.parent.mkdir(parents=True, exist_ok=True)
     pl_blocks.to_parquet(cache_path)
@@ -421,8 +422,8 @@ def build_vap_categories(vap_raw):
         DataFrame indexed by GEOID with total_pop_20, VAP and the six categories.
     """
     vap = pd.DataFrame(index=vap_raw.index)
-    vap["VAP"] = vap_raw["p3_001n"]                 # total VAP (P3_001N)
-    vap["total_pop_20"] = vap_raw["p3_001n"]        # total population (== VAP here)
+    vap["total_pop_20"] = vap_raw["p1_001n"]        # total population, all ages (P1_001N)
+    vap["VAP"] = vap_raw["p3_001n"]                 # voting-age population, 18+ (P3_001N)
 
     # BVAP — sum of the 32 any-part-Black rows.
     vap["BVAP"] = vap_raw[BVAP_VARS].sum(axis=1)
@@ -446,7 +447,21 @@ def build_vap_categories(vap_raw):
         "check the variable tables!"
     )
 
-    print(f"✅ VAP partitioned into {len(CATEGORIES)} categories for "
+    # Sanity check: VAP should never exceed total population.
+    bad_vap = vap["VAP"] > vap["total_pop_20"]
+    assert not bad_vap.any(), (
+        f"Found {bad_vap.sum()} blocks where VAP > total population. "
+        "Check P1/P3 variables or Census data merge."
+    )
+
+    print(f"Blocks with total population = 0: {(vap['total_pop_20'] == 0).sum():,}")
+    print(f"Blocks with VAP = 0: {(vap['VAP'] == 0).sum():,}")
+    print(
+        "Blocks with total population > 0 but VAP = 0: "
+        f"{((vap['total_pop_20'] > 0) & (vap['VAP'] == 0)).sum():,}"
+    )
+
+    print(f" VAP partitioned into {len(CATEGORIES)} categories for "
           f"{len(vap):,} blocks (max partition error {max_err:.2e}).")
     return vap
 
