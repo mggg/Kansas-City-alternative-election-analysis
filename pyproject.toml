@@ -5,6 +5,7 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "census>=0.8.27",
     "folium>=0.20.0",
     "geopandas>=1.1.3",
     "gerrychain>=0.3.2",
@@ -13,5 +14,16 @@ dependencies = [
     "joblib-progress>=1.0.6",
     "mapclassify>=2.10.0",
     "matplotlib>=3.11.0",
+    "pyarrow>=24.0.0",
+    "pyproj>=3.7.2",
+    "python-dotenv>=1.2.2",
+    "requests>=2.34.2",
+    "shapely>=2.1.2",
+    "us>=3.2.0",
     "votekit>=3.4.0",
+]
+
+[dependency-groups]
+dev = [
+    "ipykernel>=7.3.0",
 ]

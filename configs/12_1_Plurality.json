@@ -1,7 +1,7 @@
 {
   "run_name": "kansas_city_run",
 
-  "geodata_path": "./data/kcmo_districts_vtd.gpkg",
+  "geodata_path": "./data/KC_blocks_vap_cvap.gpkg",
 
   "gerrychain_output_dir": "./outputs/districts/chain_out",
 

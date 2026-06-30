@@ -7,11 +7,12 @@ and writes aggregated election results to JSON files.
 """
 
 import json
+import inspect
 from glob import glob
 from pathlib import Path
 from joblib import Parallel, delayed
-from votekit import RankProfile, elections
-from typing import List, Iterable, Any
+from votekit import RankProfile, ScoreProfile, elections
+from typing import List, Iterable, Any, get_args
 from dataclasses import dataclass
 
 
@@ -29,6 +30,11 @@ class DistrictConfig:
     num_districts: int
     winners: int
 
+
+def _required_profile(cls):
+    annotation = inspect.signature(cls.__init__).parameters["profile"].annotation
+    expected_types = get_args(annotation)
+    return expected_types if expected_types else (annotation,)  # tuple of acceptable profile types
 
 def _import_voting_rules_from_vote_kit(rules: str) -> dict:
     classes = {rule: getattr(elections, rule) for rule in rules}
@@ -51,20 +57,22 @@ def _candidate_list_from_elected(elected: Iterable[set]) -> List[str]:
             winners.append(str(next(iter(s))))
     return winners
 
-def _process_profile(profile_file: str | Path, n_seats: int, voting_configs: dict) -> List[str]:
+def _process_profile(profile_file: str | Path, voting_configs: dict) -> List[str]:
     """
     Load a voter profile csv and run an election to determine winners.
     Dynamically load election classes based on voting_config settings
 
     Args:
         profile_file: Path to the voter profile csv.
-        n_seats: Number of seats to fill in this election.
+        voting_configs: Election and voting settings specified in configuration files
 
     Returns:
         {[type]: [winner_ids]} e.g. { "stv": ["A2", "B1", "B3"] }
+
+    TO-DO: Figure out how to use RankProfile OR ScoreProfile for BlockPlurality if desired. 
+        Current default is RankProfile.
     """
     profile_path = Path(profile_file)
-    profile: RankProfile = RankProfile.from_csv(profile_path)
 
     # Dynamically obtain election type classes from VoteKit based on the voting
     # rule configuration provided.
@@ -75,6 +83,16 @@ def _process_profile(profile_file: str | Path, n_seats: int, voting_configs: dic
     # For each election class, run the election simulation
 
     for rule, election_class in election_classes.items():
+
+        # We will use type annotations from the election class object to determine what type
+        # of profile we need to create for object instantiation. If RankProfile is in that
+        # accepted class list, we use it. If not, use ScoreProfile.
+
+        profile_types = _required_profile(election_class)
+
+        profile_class = RankProfile if RankProfile in profile_types else ScoreProfile
+
+        profile = profile_class.from_csv(profile_path)
 
         # The parameters used in the class constructors are specified in the
         # configuration files, under voting_configs. We use keyword argument spreading
@@ -121,7 +139,7 @@ def _parse_district_configs(raw: Any) -> List[DistrictConfig]:
 
 def simulate_elections(config) -> None:
     """
-    run stv/plurality elections in parallel over all voter profiles.
+    Run elections in parallel over all voter profiles.
 
     Args:
         config: Parsed config dict.
@@ -170,12 +188,12 @@ def simulate_elections(config) -> None:
             if ctx is not None:
                 with ctx:
                     results_list = Parallel(n_jobs=n_jobs)(
-                        delayed(_process_profile)(pf, dc.winners, config["voting_configs"]) for pf in all_profile_files
+                        delayed(_process_profile)(pf, config["voting_configs"]) for pf in all_profile_files
                     )
             else:
                 print(f"[simulate_elections] {desc} (no joblib_progress installed)")
                 results_list = Parallel(n_jobs=n_jobs)(
-                    delayed(_process_profile)(pf, dc.winners, config["voting_configs"]) for pf in all_profile_files
+                    delayed(_process_profile)(pf, config["voting_configs"]) for pf in all_profile_files
                 )
 
 
