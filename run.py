@@ -9,7 +9,7 @@ from pipeline.settings_generator import generate_settings
 from pipeline.profile_generator import generate_profiles
 from pipeline.simulate_elections import simulate_elections
 from pipeline.data_generator import generate_data
-from pipeline.summarize_results import summarize_results
+from pipeline.summarize_results import summarize_results, plot_combined_bubbles_all_runs
 
 def load_all_config_files():
     all_config_files = [load_config(path) for path in glob(f"configs/*.json")]
@@ -23,10 +23,11 @@ def load_config(config_path: str) -> dict:
 
 if __name__ == "__main__":
     # Load config
-    configurations = load_all_config_files()
+    configurations = [load_config("configs/baseline.json")]#load_all_config_files()
 
     for config in configurations:
-        print(f"Run name: {config['run_name']}")
+        print("==============================================")
+        print(f"Run name: {config["run_name"]}")
         print(f"Districts: {config['district_configs']}")
         print(f"Chain length: {config['chain_length']}")
         
@@ -56,3 +57,11 @@ if __name__ == "__main__":
         # Step 5 - Summarize Results
         print("\n=== Summarizing Results ===")
         summarize_results(config)
+
+    # Step 6 - Cross-run summary: one combined bubble plot comparing every run.
+    # Pass an explicit config (any one works: the seat-axis range and population
+    # share are run-independent) rather than relying on the loop's leftover
+    # binding, which would be unbound if there were no config files.
+    if configurations:
+        print("\n=== Building cross-run combined bubble plot ===")
+        plot_combined_bubbles_all_runs(configurations[0])

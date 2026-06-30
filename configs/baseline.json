@@ -1,5 +1,5 @@
 {
-  "run_name": "kansas_city_run",
+  "run_name": "Kansas_City_Baseline",
 
   "geodata_path": "./data/kcmo_districts_vtd.gpkg",
 
@@ -17,7 +17,7 @@
   "epsilon": 0.05,
 
   "voting_configs": {
-    "STV": { "n_seats": 3, "quota": "droop", "simultaneous": false, "tiebreak": "random" }
+    "STV": { "n_seats": 3, "tiebreak": "random" }
   },
 
   "district_configs": [

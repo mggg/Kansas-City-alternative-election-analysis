@@ -1,5 +1,5 @@
 {
-  "run_name": "kansas_city_run",
+  "run_name": "Kansas_City_6X1_IRV",
 
   "geodata_path": "./data/kcmo_districts_vtd.gpkg",
 
@@ -8,7 +8,7 @@
   "population_column": "total_vap_20",
   "pop_of_interest_column": "white_vap_20",
 
-  "chain_length": 10000,
+  "chain_length": 1000,
 
   "num_subsamples": 5,
 
