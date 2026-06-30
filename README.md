@@ -1,5 +1,17 @@
 # Kansas-City-alternative-election-analysis
 
+## District Generator Parameters
+
+- `run_name`: Name of the simulation run. Used to create the output directory and output file names
+- `seed`: Random seed used to ensure reproducibility of the Markov Chain simulation.
+- `chain_length`: Number of Markov Chain iterations (i.e., the number of districting plans generated).
+- `n_district`: Number of districts to generate in the simulated districting plans.
+- `epsilon` (`seed_epsilon`): Population tolerance used when generating the **initial random districting plan**. Each district is initialized within ±`epsilon` of the ideal district population. |
+- `geodata_path`: Path to the GeoPackage (`.gpkg`) containing the geographic units (precincts or census blocks) and their demographic attributes.
+- `population_column`: Column name of total population variable.
+
+Note: This implementation uses two population tolerances. seed_epsilon controls the generation of the initial random partition, while chain_epsilon controls the maximum population deviation allowed throughout the Markov Chain. This allows the chain to begin from a valid initial plan while enforcing a consistent population balance (±5%) during sampling.
+
 ## VoteKit Voting Rule Parameters
 
 All classes take `profile` as the first positional argument. The type required differs:
