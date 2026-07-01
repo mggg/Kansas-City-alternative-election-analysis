@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>KC Election Analysis — Config Builder</title>
+<style>
+  :root {
+    --bg: #f4f6f9;
+    --card: #ffffff;
+    --border: #d9dee6;
+    --accent: #2b6cb0;
+    --accent-dark: #234e7d;
+    --danger: #c0392b;
+    --muted: #6b7280;
+    --code: #f1f3f6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: #1f2933;
+    line-height: 1.45;
+  }
+  header {
+    background: var(--accent-dark);
+    color: #fff;
+    padding: 18px 24px;
+  }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 4px 0 0; font-size: 13px; opacity: 0.85; }
+  .layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 380px;
+    gap: 20px;
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 0 20px;
+  }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin-bottom: 18px;
+  }
+  .card h2 {
+    margin: 0 0 12px;
+    font-size: 15px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--accent-dark);
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 8px;
+  }
+  label { display: block; font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .hint { font-weight: 400; color: var(--muted); font-size: 12px; }
+  input[type="text"], input[type="number"], select {
+    width: 100%;
+    padding: 7px 9px;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    font-size: 13px;
+    background: #fff;
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .field { margin-bottom: 12px; }
+  .row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr auto;
+    gap: 8px;
+    align-items: end;
+    margin-bottom: 8px;
+  }
+  .row.two { grid-template-columns: 1fr 1fr auto; }
+  button {
+    font-size: 13px;
+    padding: 7px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--accent);
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+  }
+  button.secondary { background: #fff; color: var(--accent); }
+  button.ghost { background: #fff; color: var(--danger); border-color: var(--danger); padding: 6px 9px; }
+  button:hover { filter: brightness(0.96); }
+  .matrix { border-collapse: collapse; width: 100%; font-size: 13px; }
+  .matrix th, .matrix td { border: 1px solid var(--border); padding: 4px; text-align: center; }
+  .matrix th { background: var(--code); }
+  .matrix input { width: 80px; text-align: center; }
+  .sidebar { position: sticky; top: 20px; align-self: start; }
+  pre {
+    background: var(--code);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 12px;
+    max-height: 480px;
+    overflow: auto;
+    margin: 0;
+  }
+  .actions { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .actions button { width: 100%; padding: 10px; font-size: 14px; }
+  #status { font-size: 13px; margin-top: 10px; min-height: 18px; }
+  #status.ok { color: #1a7f37; }
+  #status.err { color: var(--danger); }
+  .taglist { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+  .tag { background: var(--code); border: 1px solid var(--border); border-radius: 14px; padding: 3px 10px; font-size: 12px; }
+  .addbtn { margin-top: 4px; }
+  small.err { color: var(--danger); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Kansas City — Election Analysis Config Builder</h1>
+  <p>Fill in the fields, then generate a JSON config into the project's <code>configs/</code> directory.</p>
+</header>
+
+<div class="layout">
+  <!-- ============ FORM ============ -->
+  <form id="configForm" autocomplete="off">
+
+    <div class="card">
+      <h2>Load Existing Config</h2>
+      <div class="row two">
+        <div>
+          <label>Config file <span class="hint">from configs/</span></label>
+          <select id="load_select"></select>
+        </div>
+        <button type="button" id="load_refresh" class="secondary" title="Refresh list">↻</button>
+        <button type="button" id="load_btn">Load into form</button>
+      </div>
+      <small class="hint" id="load_note"></small>
+    </div>
+
+    <div class="card">
+      <h2>Run</h2>
+      <div class="field">
+        <label>run_name <span class="hint">— identifier for this run</span></label>
+        <input type="text" id="run_name" value="Kansas_City_New_Run" />
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>seed</label>
+          <input type="number" id="seed" value="42" />
+        </div>
+        <div class="field">
+          <label>num_reps <span class="hint">reps per plan</span></label>
+          <input type="number" id="num_reps" value="2" min="1" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Data & Columns</h2>
+      <div class="field">
+        <label>geodata_path <span class="hint">— file from the data/ directory</span></label>
+        <select id="geodata_path"></select>
+        <small class="hint" id="geodata_note"></small>
+      </div>
+      <div class="field">
+        <label>gerrychain_output_dir</label>
+        <input type="text" id="gerrychain_output_dir" value="outputs/districts/chain_out" />
+      </div>
+      <div class="grid3">
+        <div class="field">
+          <label>population_column</label>
+          <select id="population_column"></select>
+        </div>
+        <div class="field">
+          <label>population_vap_column</label>
+          <select id="population_vap_column"></select>
+        </div>
+        <div class="field">
+          <label>pop_of_interest_column</label>
+          <select id="pop_of_interest_column"></select>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Chain & Sampling</h2>
+      <div class="grid3">
+        <div class="field">
+          <label>chain_length</label>
+          <input type="number" id="chain_length" value="1000" min="1" />
+        </div>
+        <div class="field">
+          <label>num_subsamples</label>
+          <input type="number" id="num_subsamples" value="5" min="1" />
+        </div>
+        <div class="field">
+          <label>epsilon <span class="hint">pop. balance</span></label>
+          <input type="number" id="epsilon" value="0.01" step="0.001" />
+        </div>
+      </div>
+      <div class="grid2">
+        <div class="field">
+          <label>total_seats</label>
+          <input type="number" id="total_seats" value="12" min="1" />
+        </div>
+        <div class="field">
+          <label>num_voters</label>
+          <input type="number" id="num_voters" value="1000" min="1" />
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Voting Rules <span class="hint">(voting_configs)</span></h2>
+      <div class="field">
+        <label>Rule</label>
+        <select id="vc_rule"></select>
+      </div>
+      <p class="hint" style="margin:-4px 0 8px">
+        Parameters below match the selected rule. Leave a field on
+        <em>(default)</em> / blank to omit it and use VoteKit's default.
+      </p>
+      <div id="vc_params" class="grid2"></div>
+      <button type="button" id="vc_add" class="addbtn">Add / update rule</button>
+      <div id="vc_list" style="margin-top:10px"></div>
+    </div>
+
+    <div class="card">
+      <h2>District Configs</h2>
+      <p class="hint" style="margin-top:-4px">Each entry: number of districts and winners (seats) per district.</p>
+      <div id="dc_list"></div>
+      <div class="row two" style="margin-top:8px">
+        <div>
+          <label>num_districts</label>
+          <input type="number" id="dc_num" value="6" min="1" />
+        </div>
+        <div>
+          <label>winners</label>
+          <input type="number" id="dc_win" value="1" min="1" />
+        </div>
+        <button type="button" id="dc_add">Add</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Slates & Candidates</h2>
+      <p class="hint" style="margin-top:-4px">Two blocs. Candidate names are comma-separated.</p>
+      <div class="grid2" id="slateInputs">
+        <div class="field">
+          <label>Slate <input type="text" class="slateName" data-slate="A" value="A" style="width:60px;display:inline-block" /></label>
+          <input type="text" class="slateCands" data-slate="A" value="A1, A2, A3, A4, A5" />
+        </div>
+        <div class="field">
+          <label>Slate <input type="text" class="slateName" data-slate="B" value="B" style="width:60px;display:inline-block" /></label>
+          <input type="text" class="slateCands" data-slate="B" value="B1, B2, B3, B4, B5" />
+        </div>
+      </div>
+      <div class="field">
+        <label>focal_group</label>
+        <select id="focal_group"></select>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Turnout</h2>
+      <div class="grid2" id="turnoutInputs"></div>
+    </div>
+
+    <div class="card">
+      <h2>Cohesion Parameters</h2>
+      <p class="hint" style="margin-top:-4px">Voter of row-slate's support for column-slate's candidates.</p>
+      <table class="matrix"><tbody id="cohesionMatrix"></tbody></table>
+    </div>
+
+    <div class="card">
+      <h2>Alphas <span class="hint">(Dirichlet)</span></h2>
+      <table class="matrix"><tbody id="alphaMatrix"></tbody></table>
+    </div>
+
+  </form>
+
+  <!-- ============ SIDEBAR ============ -->
+  <div class="sidebar">
+    <div class="card">
+      <h2>Live JSON Preview</h2>
+      <pre id="preview">{}</pre>
+      <div class="field" style="margin-top:12px">
+        <label>Filename <span class="hint">(defaults to run_name)</span></label>
+        <input type="text" id="filename" placeholder="run_name.json" />
+      </div>
+      <label style="font-weight:400;font-size:12px">
+        <input type="checkbox" id="overwrite" /> Overwrite if file exists
+      </label>
+      <div class="actions">
+        <button type="button" id="btnGenerate">Generate into configs/</button>
+        <button type="button" class="secondary" id="btnDownload">Download JSON</button>
+        <button type="button" class="secondary" id="btnCopy">Copy JSON</button>
+      </div>
+      <div id="status"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Per-rule parameter schema, transcribed from README.md "VoteKit Voting Rule
+// Parameters". Each entry is an ordered list of param descriptors so the
+// generated config preserves a sensible key order.
+//   type: "number" | "select" | "bool"
+//   opts: allowed values for a select (a blank "(default)" is added automatically)
+//   min / ph: number-input constraints / placeholder
+const TIE_CONV = ["high", "average", "low"];   // fpv_/scoring_tie_convention values
+const P = {
+  n_seats:      { key: "n_seats", type: "number", min: 1, ph: "1" },
+  quota:        { key: "quota", type: "select", opts: ["droop", "hare"] },
+  simultaneous: { key: "simultaneous", type: "bool" },
+  fpv:          { key: "fpv_tie_convention", type: "select", opts: TIE_CONV },
+  scoring:      { key: "scoring_tie_convention", type: "select", opts: TIE_CONV },
+};
+const tb = (...opts) => ({ key: "tiebreak", type: "select", opts });
+const transfer = () => ({
+  key: "transfer", type: "select",
+  opts: ["fractional", "fractional_random", "cambridge_random", "random"],
+});
+
+const RULE_PARAMS = {
+  // Ranking elections
+  Plurality:         [P.n_seats, tb("random", "borda"), P.fpv],
+  SNTV:              [P.n_seats, tb("random", "borda")],
+  Borda:             [P.n_seats, tb("random", "first_place"), P.scoring],
+  STV:               [P.n_seats, P.quota, P.simultaneous, tb("borda", "random")],
+  FastSTV:           [P.n_seats, transfer(), P.quota, P.simultaneous, tb("borda", "random", "cambridge_random")],
+  AlbanySTV:         [P.n_seats, transfer(), P.quota, P.simultaneous, tb("borda", "random", "cambridge_random")],
+  IRV:               [P.quota, tb("random", "borda")],
+  FastIRV:           [P.quota, tb("random", "borda")],
+  SequentialRCV:     [P.n_seats, P.quota, P.simultaneous, tb("random", "borda")],
+  FastSequentialRCV: [P.n_seats, P.quota, P.simultaneous, tb("random", "borda")],
+  Alaska:            [{ key: "m_1", type: "number", min: 1, ph: "2" }, { key: "m_2", type: "number", min: 1, ph: "1" }, P.quota, P.simultaneous, tb("random", "borda"), P.fpv],
+  TopTwo:            [tb("random", "borda"), P.fpv],
+  CondoBorda:        [P.n_seats],
+  DominatingSets:    [],
+  PluralityVeto:     [P.n_seats, tb("first_place", "borda", "random", "lex"), P.scoring],
+  SerialVeto:        [P.n_seats, tb("first_place", "borda", "random", "lex"), P.scoring],
+  SimultaneousVeto:  [P.n_seats, { key: "candidate_weights", type: "select", opts: ["first_place", "uniform", "borda", "harmonic"] }, tb("first_place", "remaining_score", "veto_pressure", "lex"), P.scoring, { key: "return_all_tied_winners", type: "bool" }],
+  RandomDictator:        [P.n_seats, P.fpv],
+  BoostedRandomDictator: [P.n_seats, P.fpv],
+  RankedPairs:       [P.n_seats, tb("lexicographic")],
+  Schulze:           [P.n_seats, tb("lexicographic")],
+  // Score elections
+  GeneralRating:     [P.n_seats, { key: "per_candidate_limit", type: "number", min: 1, ph: "1" }, { key: "budget", type: "number", min: 1, ph: "total points/voter" }, tb("random")],
+  Rating:            [P.n_seats, { key: "per_candidate_limit", type: "number", min: 1, ph: "1" }, tb("random")],
+  Limited:           [P.n_seats, { key: "budget", type: "number", min: 1, ph: "≤ n_seats" }, tb("random")],
+  Cumulative:        [P.n_seats, tb("random")],
+  Approval:          [P.n_seats, tb("random")],
+  BlockPlurality:    [P.n_seats, { key: "budget", type: "number", min: 1, ph: "→ n_seats" }, tb("random"), P.scoring],
+  BlocPlurality:     [P.n_seats, { key: "budget", type: "number", min: 1, ph: "→ n_seats" }, tb("random")],
+};
+const VOTING_RULES = Object.keys(RULE_PARAMS);
+
+// ---- state that isn't captured directly by DOM inputs ----
+let votingConfigs = { IRV: { tiebreak: "random" }, Plurality: { tiebreak: "random" } };
+let districtConfigs = [ { num_districts: 6, winners: 1 } ];
+
+const $ = (id) => document.getElementById(id);
+
+// ---- populate the rule dropdown ----
+VOTING_RULES.forEach(r => {
+  const o = document.createElement("option");
+  o.value = r; o.textContent = r;
+  $("vc_rule").appendChild(o);
+});
+
+// ---- render the parameter fields for the currently selected rule ----
+function renderRuleParams() {
+  const rule = $("vc_rule").value;
+  const params = RULE_PARAMS[rule] || [];
+  const wrap = $("vc_params");
+  wrap.innerHTML = "";
+  if (!params.length) {
+    wrap.innerHTML = '<p class="hint">No additional parameters for this rule.</p>';
+    return;
+  }
+  const existing = votingConfigs[rule] || {};   // preload values when editing
+  params.forEach(p => {
+    const field = document.createElement("div");
+    field.className = "field";
+    field.innerHTML = `<label>${p.key}</label>`;
+    let el;
+    if (p.type === "select" || p.type === "bool") {
+      el = document.createElement("select");
+      const opts = p.type === "bool" ? ["true", "false"] : p.opts;
+      el.innerHTML = '<option value="">(default)</option>' +
+        opts.map(o => `<option value="${o}">${o}</option>`).join("");
+    } else {
+      el = document.createElement("input");
+      el.type = "number";
+      if (p.min != null) el.min = p.min;
+      if (p.ph) el.placeholder = p.ph;
+    }
+    el.dataset.param = p.key;
+    el.dataset.type = p.type;
+    if (existing[p.key] !== undefined) el.value = String(existing[p.key]);
+    field.appendChild(el);
+    wrap.appendChild(field);
+  });
+}
+$("vc_rule").addEventListener("change", renderRuleParams);
+
+// ---- slate helpers ----
+function slateNames() {
+  return Array.from(document.querySelectorAll(".slateName")).map(i => i.value.trim() || i.dataset.slate);
+}
+function slateToCandidates() {
+  const out = {};
+  document.querySelectorAll(".slateCands").forEach(inp => {
+    const name = document.querySelector(`.slateName[data-slate="${inp.dataset.slate}"]`).value.trim() || inp.dataset.slate;
+    out[name] = inp.value.split(",").map(s => s.trim()).filter(Boolean);
+  });
+  return out;
+}
+
+// ---- rebuild anything that depends on slate names ----
+function rebuildSlateDependents() {
+  const names = slateNames();
+  const prevFocal = $("focal_group").value;
+
+  // focal group dropdown
+  $("focal_group").innerHTML = "";
+  names.forEach(n => {
+    const o = document.createElement("option"); o.value = n; o.textContent = n;
+    $("focal_group").appendChild(o);
+  });
+  $("focal_group").value = names.includes(prevFocal) ? prevFocal : names[0];
+
+  // turnout inputs
+  const turnoutWrap = $("turnoutInputs");
+  const prevTurnout = {};
+  turnoutWrap.querySelectorAll("input").forEach(i => prevTurnout[i.dataset.name] = i.value);
+  turnoutWrap.innerHTML = "";
+  names.forEach(n => {
+    const div = document.createElement("div");
+    div.className = "field";
+    div.innerHTML = `<label>${n}</label>`;
+    const inp = document.createElement("input");
+    inp.type = "number"; inp.step = "0.01"; inp.min = "0"; inp.max = "1";
+    inp.dataset.name = n;
+    inp.value = prevTurnout[n] ?? "0.5";
+    inp.addEventListener("input", render);
+    div.appendChild(inp);
+    turnoutWrap.appendChild(div);
+  });
+
+  buildMatrix("cohesionMatrix", names, { defaultDiag: 0.6, defaultOff: 0.4 });
+  buildMatrix("alphaMatrix", names, { raw: true });
+  render();
+}
+
+// ---- generic square matrix (rows x cols over slate names) ----
+function buildMatrix(tbodyId, names, opts) {
+  const tbody = $(tbodyId);
+  const prev = {};
+  tbody.querySelectorAll("input").forEach(i => prev[i.dataset.key] = i.value);
+  tbody.innerHTML = "";
+
+  // header row
+  const head = document.createElement("tr");
+  head.innerHTML = "<th></th>" + names.map(n => `<th>${n}</th>`).join("");
+  tbody.appendChild(head);
+
+  const alphaDefaults = { "A|A": 0.5, "A|B": 2, "B|A": 1, "B|B": 1 };
+  names.forEach(r => {
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<th>${r}</th>`;
+    names.forEach(c => {
+      const key = `${r}|${c}`;
+      let def;
+      if (opts.raw) def = alphaDefaults[key] ?? 1;
+      else def = (r === c) ? opts.defaultDiag : opts.defaultOff;
+      const td = document.createElement("td");
+      const inp = document.createElement("input");
+      inp.type = "number"; inp.step = "0.01"; inp.dataset.key = key; inp.dataset.matrix = tbodyId;
+      inp.value = prev[key] ?? def;
+      inp.addEventListener("input", render);
+      td.appendChild(inp);
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function readMatrix(tbodyId, names) {
+  const out = {};
+  names.forEach(r => { out[r] = {}; });
+  document.querySelectorAll(`input[data-matrix="${tbodyId}"]`).forEach(inp => {
+    const [r, c] = inp.dataset.key.split("|");
+    if (out[r]) out[r][c] = Number(inp.value);
+  });
+  return out;
+}
+
+// ---- voting rules list ----
+function renderVotingList() {
+  const wrap = $("vc_list");
+  wrap.innerHTML = "";
+  const entries = Object.entries(votingConfigs);
+  if (!entries.length) { wrap.innerHTML = '<small class="err">Add at least one voting rule.</small>'; return; }
+  const div = document.createElement("div");
+  div.className = "taglist";
+  entries.forEach(([rule, cfg]) => {
+    const parts = Object.entries(cfg).map(([k, v]) => `${k}=${v}`).join(", ");
+    const span = document.createElement("span");
+    span.className = "tag";
+    const name = document.createElement("strong");
+    name.textContent = rule;
+    name.style.cursor = "pointer";
+    name.title = "Click to load into the editor above";
+    name.onclick = () => { $("vc_rule").value = rule; renderRuleParams(); };
+    span.appendChild(name);
+    span.appendChild(document.createTextNode(` {${parts}} `));
+    const x = document.createElement("button");
+    x.type = "button"; x.className = "ghost"; x.textContent = "×";
+    x.style.padding = "0 6px"; x.style.marginLeft = "4px";
+    x.onclick = () => { delete votingConfigs[rule]; renderVotingList(); render(); };
+    span.appendChild(x);
+    div.appendChild(span);
+  });
+  wrap.appendChild(div);
+}
+
+$("vc_add").onclick = () => {
+  const rule = $("vc_rule").value;
+  const cfg = {};
+  // Collect fields in schema order; omit any left blank / on "(default)".
+  document.querySelectorAll("#vc_params [data-param]").forEach(el => {
+    const v = el.value;
+    if (v === "") return;
+    if (el.dataset.type === "number") cfg[el.dataset.param] = Number(v);
+    else if (el.dataset.type === "bool") cfg[el.dataset.param] = (v === "true");
+    else cfg[el.dataset.param] = v;
+  });
+  votingConfigs[rule] = cfg;
+  renderVotingList(); render();
+};
+
+// ---- district configs list ----
+function renderDistrictList() {
+  const wrap = $("dc_list");
+  wrap.innerHTML = "";
+  if (!districtConfigs.length) { wrap.innerHTML = '<small class="err">Add at least one district config.</small>'; return; }
+  const div = document.createElement("div");
+  div.className = "taglist";
+  districtConfigs.forEach((dc, idx) => {
+    const span = document.createElement("span");
+    span.className = "tag";
+    span.innerHTML = `${dc.num_districts} districts × ${dc.winners} winner(s) `;
+    const x = document.createElement("button");
+    x.type = "button"; x.className = "ghost"; x.textContent = "×";
+    x.style.padding = "0 6px"; x.style.marginLeft = "4px";
+    x.onclick = () => { districtConfigs.splice(idx, 1); renderDistrictList(); render(); };
+    span.appendChild(x);
+    div.appendChild(span);
+  });
+  wrap.appendChild(div);
+}
+
+$("dc_add").onclick = () => {
+  districtConfigs.push({
+    num_districts: Number($("dc_num").value),
+    winners: Number($("dc_win").value),
+  });
+  renderDistrictList(); render();
+};
+
+// ---- assemble config object (key order mirrors existing files) ----
+function buildConfig() {
+  const names = slateNames();
+  return {
+    run_name: $("run_name").value,
+    geodata_path: $("geodata_path").value,
+    gerrychain_output_dir: $("gerrychain_output_dir").value,
+    population_column: $("population_column").value,
+    population_vap_column: $("population_vap_column").value,
+    pop_of_interest_column: $("pop_of_interest_column").value,
+    chain_length: Number($("chain_length").value),
+    num_subsamples: Number($("num_subsamples").value),
+    total_seats: Number($("total_seats").value),
+    epsilon: Number($("epsilon").value),
+    voting_configs: votingConfigs,
+    district_configs: districtConfigs,
+    turnout: Object.fromEntries(
+      Array.from($("turnoutInputs").querySelectorAll("input"))
+        .map(i => [i.dataset.name, Number(i.value)])
+    ),
+    num_voters: Number($("num_voters").value),
+    slate_to_candidates: slateToCandidates(),
+    focal_group: $("focal_group").value,
+    cohesion_parameters: readMatrix("cohesionMatrix", names),
+    alphas: readMatrix("alphaMatrix", names),
+    num_reps: Number($("num_reps").value),
+    seed: Number($("seed").value),
+  };
+}
+
+function render() {
+  $("preview").textContent = JSON.stringify(buildConfig(), null, 2);
+}
+
+// ---- wire up global listeners ----
+document.querySelectorAll("#configForm input, #configForm select").forEach(el => {
+  el.addEventListener("input", () => {
+    if (el.classList.contains("slateName")) rebuildSlateDependents();
+    else if (el.classList.contains("slateCands")) render();
+    else render();
+  });
+});
+
+function setStatus(msg, ok) {
+  const s = $("status");
+  s.textContent = msg;
+  s.className = ok ? "ok" : "err";
+}
+
+// ---- generate into configs/ (POST to local server) ----
+$("btnGenerate").onclick = async () => {
+  const config = buildConfig();
+  const filename = ($("filename").value.trim() || config.run_name);
+  setStatus("Saving…", true);
+  try {
+    const res = await fetch("/api/save-config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ config, filename, overwrite: $("overwrite").checked }),
+    });
+    const data = await res.json();
+    if (res.ok && data.ok) {
+      setStatus(`Saved to ${data.path}`, true);
+    } else if (res.status === 409) {
+      setStatus(`${data.error} Tick "Overwrite" to replace it.`, false);
+    } else {
+      setStatus(data.error || "Failed to save.", false);
+    }
+  } catch (e) {
+    setStatus("Could not reach the local server. Start it with: python pipeline-config/server.py", false);
+  }
+};
+
+// ---- download fallback (works even when opened as a plain file) ----
+$("btnDownload").onclick = () => {
+  const config = buildConfig();
+  const name = ($("filename").value.trim() || config.run_name || "config").replace(/\.json$/i, "");
+  const blob = new Blob([JSON.stringify(config, null, 2) + "\n"], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${name}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  setStatus(`Downloaded ${name}.json — move it into configs/`, true);
+};
+
+$("btnCopy").onclick = async () => {
+  await navigator.clipboard.writeText($("preview").textContent);
+  setStatus("JSON copied to clipboard.", true);
+};
+
+// ---- geodata file + column dropdowns (populated from the server) ----
+const DEFAULT_GEODATA = "./data/KC_blocks_vap_cvap.gpkg";
+const DEFAULT_COLS = {
+  population_column: "total_pop_20",
+  population_vap_column: "total_vap_20",
+  pop_of_interest_column: "white_vap_20",
+};
+const COL_SELECTS = ["population_column", "population_vap_column", "pop_of_interest_column"];
+
+// Fill a <select> with values, keeping `desired` selected if it's available,
+// otherwise falling back to the first option.
+function fillSelect(sel, values, desired) {
+  sel.innerHTML = values.map(v => `<option value="${v}">${v}</option>`).join("");
+  if (desired && values.includes(desired)) sel.value = desired;
+}
+
+async function loadColumns() {
+  const path = $("geodata_path").value;
+  const note = $("geodata_note");
+  try {
+    const res = await fetch(`/api/geodata-columns?path=${encodeURIComponent(path)}`);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "Failed to read columns.");
+    COL_SELECTS.forEach(id => {
+      const desired = $(id).value || DEFAULT_COLS[id];   // preserve current pick across file switches
+      fillSelect($(id), data.columns, desired);
+    });
+    note.textContent = `${data.columns.length} columns from ${path.split("/").pop()}.`;
+    note.style.color = "";
+  } catch (e) {
+    // Offline / unreadable: keep the form usable with the known default names.
+    COL_SELECTS.forEach(id => {
+      const cur = $(id).value || DEFAULT_COLS[id];
+      fillSelect($(id), [cur], cur);
+    });
+    note.textContent = "Couldn't read columns from server — using defaults.";
+    note.style.color = "var(--danger)";
+  }
+  render();
+}
+
+async function loadGeodataFiles() {
+  try {
+    const res = await fetch("/api/geodata-files");
+    const data = await res.json();
+    const files = (data.files && data.files.length) ? data.files : [DEFAULT_GEODATA];
+    fillSelect($("geodata_path"), files, DEFAULT_GEODATA);
+  } catch (e) {
+    fillSelect($("geodata_path"), [DEFAULT_GEODATA], DEFAULT_GEODATA);
+    $("geodata_note").textContent = "Server offline — start it to browse data/ files.";
+    $("geodata_note").style.color = "var(--danger)";
+  }
+  await loadColumns();
+}
+$("geodata_path").addEventListener("change", loadColumns);
+
+// ---- load an existing config and prepopulate every field ----
+
+// Select `value` in a <select>, adding the option first if it isn't present
+// (so a config's file/column still shows even if it isn't currently listed).
+function setSelectValue(sel, value) {
+  const v = String(value);
+  if (!Array.from(sel.options).some(o => o.value === v)) {
+    const o = document.createElement("option");
+    o.value = v; o.textContent = v;
+    sel.appendChild(o);
+  }
+  sel.value = v;
+}
+
+function applyMatrix(tbodyId, matrix) {
+  if (!matrix) return;
+  document.querySelectorAll(`input[data-matrix="${tbodyId}"]`).forEach(inp => {
+    const [r, c] = inp.dataset.key.split("|");
+    if (matrix[r] && matrix[r][c] !== undefined) inp.value = matrix[r][c];
+  });
+}
+
+async function applyConfig(cfg) {
+  const setVal = (id, v) => { if (v !== undefined && v !== null) $(id).value = v; };
+
+  // plain scalar fields
+  ["run_name", "seed", "num_reps", "gerrychain_output_dir", "chain_length",
+   "num_subsamples", "epsilon", "total_seats", "num_voters"].forEach(k => setVal(k, cfg[k]));
+
+  // voting rules + district configs (deep-copied so edits don't mutate the load)
+  if (cfg.voting_configs) {
+    votingConfigs = JSON.parse(JSON.stringify(cfg.voting_configs));
+    renderVotingList();
+    renderRuleParams();
+  }
+  if (Array.isArray(cfg.district_configs)) {
+    districtConfigs = JSON.parse(JSON.stringify(cfg.district_configs));
+    renderDistrictList();
+  }
+
+  // slates: map the config's slate keys onto the two slate rows, then rebuild
+  // the slate-dependent widgets (focal group, turnout, matrices) before filling.
+  if (cfg.slate_to_candidates) {
+    const slates = Object.keys(cfg.slate_to_candidates);
+    const nameInputs = Array.from(document.querySelectorAll(".slateName"));
+    nameInputs.forEach((inp, i) => {
+      if (slates[i] === undefined) return;
+      inp.value = slates[i];
+      const cand = document.querySelector(`.slateCands[data-slate="${inp.dataset.slate}"]`);
+      if (cand) cand.value = cfg.slate_to_candidates[slates[i]].join(", ");
+    });
+    if (slates.length > nameInputs.length) {
+      $("load_note").textContent =
+        `Note: this form supports ${nameInputs.length} slates; extra slates in the file were ignored.`;
+    }
+    rebuildSlateDependents();
+  }
+
+  if (cfg.focal_group) setSelectValue($("focal_group"), cfg.focal_group);
+  if (cfg.turnout) {
+    document.querySelectorAll("#turnoutInputs input").forEach(inp => {
+      if (cfg.turnout[inp.dataset.name] !== undefined) inp.value = cfg.turnout[inp.dataset.name];
+    });
+  }
+  applyMatrix("cohesionMatrix", cfg.cohesion_parameters);
+  applyMatrix("alphaMatrix", cfg.alphas);
+
+  // geodata + columns last: pick the file, await its columns, then set columns
+  if (cfg.geodata_path) {
+    setSelectValue($("geodata_path"), cfg.geodata_path);
+    await loadColumns();
+  }
+  COL_SELECTS.forEach(id => { if (cfg[id] !== undefined) setSelectValue($(id), cfg[id]); });
+
+  render();
+}
+
+async function loadConfigList() {
+  try {
+    const res = await fetch("/api/configs");
+    const data = await res.json();
+    const names = data.configs || [];
+    $("load_select").innerHTML = names.length
+      ? names.map(n => `<option value="${n}">${n}</option>`).join("")
+      : '<option value="">(no config files found)</option>';
+  } catch (e) {
+    $("load_select").innerHTML = '<option value="">(server offline)</option>';
+  }
+}
+
+$("load_refresh").onclick = loadConfigList;
+$("load_btn").onclick = async () => {
+  const name = $("load_select").value;
+  const note = $("load_note");
+  if (!name) { note.textContent = "No config selected."; note.style.color = "var(--danger)"; return; }
+  note.style.color = ""; note.textContent = "Loading…";
+  try {
+    const res = await fetch(`/api/config?name=${encodeURIComponent(name)}`);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "Failed to load.");
+    await applyConfig(data.config);
+    // suggest saving back to the same filename
+    $("filename").value = name.replace(/\.json$/i, "");
+    if (!note.textContent.startsWith("Note:")) {
+      note.textContent = `Loaded ${name}.`;
+      note.style.color = "";
+    }
+  } catch (e) {
+    note.textContent = e.message || "Could not load config.";
+    note.style.color = "var(--danger)";
+  }
+};
+
+// ---- init ----
+rebuildSlateDependents();
+renderRuleParams();
+renderVotingList();
+renderDistrictList();
+loadGeodataFiles();   // async: populates geodata + column selects, then re-renders
+loadConfigList();     // async: populates the "Load Existing Config" dropdown
+render();
+</script>
+</body>
+</html>

@@ -847,9 +847,9 @@ def _draw_district_model_bubbles(
             zorder=1,
         )
 
-    ax.set_xlim(0, seats_per_district + 1)
-    ax.set_xticks(range(0, seats_per_district + 2))
-    ax.set_xlabel("Focal seats in district")
+    ax.set_xlim(-1, seats_per_district + 1)
+    ax.set_xticks(range(0, seats_per_district + 1))
+    ax.set_xlabel("Council Seats in District")
 
     # One tick per district, centered on its block of model rows; 1-indexed.
     ax.set_ylim(-0.7, n_rows - 0.3)
