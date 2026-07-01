@@ -64,7 +64,7 @@ load_dotenv(".env")
 API_KEY = os.getenv("CENSUS_API_KEY")
 if not API_KEY:
     raise ValueError(
-        "CENSUS_API_KEY not found. Add it to pipeline/.env "
+        "CENSUS_API_KEY not found. Add it to .env  in root"
         "(get a free key at https://api.census.gov/data/key_signup.html)."
     )
 
