@@ -19,8 +19,16 @@ installed.
 
 ## Using it
 
+0. To start from an existing config, pick it in **Load Existing Config** and
+   click **Load into form** — every field (including voting rules, district
+   configs, slates, turnout, and the cohesion/alpha matrices) is prepopulated
+   from that file's JSON, and the filename is pre-filled so you can save back to
+   it or under a new name.
 1. Fill in the form fields (they are pre-populated with sensible defaults that
-   match the existing configs).
+   match the existing configs). **`geodata_path`** is a dropdown of the geodata
+   files found under `data/`; picking one reads that file's schema and turns
+   **`population_column`**, **`population_vap_column`**, and
+   **`pop_of_interest_column`** into dropdowns of that file's actual columns.
 2. Add one or more **voting rules** (`voting_configs`) and **district configs**.
    Pick a rule and the form shows only the parameters that rule accepts
    (transcribed from `README.md` → *VoteKit Voting Rule Parameters*) — e.g.
@@ -36,8 +44,9 @@ installed.
 ### Without the server
 
 If you just open `index.html` as a file (`file://`), the **Generate** button
-can't reach the server, but **Download JSON** and **Copy JSON** still work —
-save the file and drop it into `configs/` yourself.
+can't reach the server and the geodata/column dropdowns fall back to their
+default names (rather than reading `data/`). **Download JSON** and **Copy JSON**
+still work — save the file and drop it into `configs/` yourself.
 
 ## Fields
 

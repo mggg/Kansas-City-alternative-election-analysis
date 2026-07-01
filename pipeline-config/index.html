@@ -126,6 +126,19 @@
   <form id="configForm" autocomplete="off">
 
     <div class="card">
+      <h2>Load Existing Config</h2>
+      <div class="row two">
+        <div>
+          <label>Config file <span class="hint">from configs/</span></label>
+          <select id="load_select"></select>
+        </div>
+        <button type="button" id="load_refresh" class="secondary" title="Refresh list">↻</button>
+        <button type="button" id="load_btn">Load into form</button>
+      </div>
+      <small class="hint" id="load_note"></small>
+    </div>
+
+    <div class="card">
       <h2>Run</h2>
       <div class="field">
         <label>run_name <span class="hint">— identifier for this run</span></label>
@@ -146,8 +159,9 @@
     <div class="card">
       <h2>Data & Columns</h2>
       <div class="field">
-        <label>geodata_path</label>
-        <input type="text" id="geodata_path" value="./data/KC_blocks_vap_cvap.gpkg" />
+        <label>geodata_path <span class="hint">— file from the data/ directory</span></label>
+        <select id="geodata_path"></select>
+        <small class="hint" id="geodata_note"></small>
       </div>
       <div class="field">
         <label>gerrychain_output_dir</label>
@@ -156,15 +170,15 @@
       <div class="grid3">
         <div class="field">
           <label>population_column</label>
-          <input type="text" id="population_column" value="total_pop_20" />
+          <select id="population_column"></select>
         </div>
         <div class="field">
           <label>population_vap_column</label>
-          <input type="text" id="population_vap_column" value="total_vap_20" />
+          <select id="population_vap_column"></select>
         </div>
         <div class="field">
           <label>pop_of_interest_column</label>
-          <input type="text" id="pop_of_interest_column" value="white_vap_20" />
+          <select id="pop_of_interest_column"></select>
         </div>
       </div>
     </div>
@@ -648,11 +662,182 @@ $("btnCopy").onclick = async () => {
   setStatus("JSON copied to clipboard.", true);
 };
 
+// ---- geodata file + column dropdowns (populated from the server) ----
+const DEFAULT_GEODATA = "./data/KC_blocks_vap_cvap.gpkg";
+const DEFAULT_COLS = {
+  population_column: "total_pop_20",
+  population_vap_column: "total_vap_20",
+  pop_of_interest_column: "white_vap_20",
+};
+const COL_SELECTS = ["population_column", "population_vap_column", "pop_of_interest_column"];
+
+// Fill a <select> with values, keeping `desired` selected if it's available,
+// otherwise falling back to the first option.
+function fillSelect(sel, values, desired) {
+  sel.innerHTML = values.map(v => `<option value="${v}">${v}</option>`).join("");
+  if (desired && values.includes(desired)) sel.value = desired;
+}
+
+async function loadColumns() {
+  const path = $("geodata_path").value;
+  const note = $("geodata_note");
+  try {
+    const res = await fetch(`/api/geodata-columns?path=${encodeURIComponent(path)}`);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "Failed to read columns.");
+    COL_SELECTS.forEach(id => {
+      const desired = $(id).value || DEFAULT_COLS[id];   // preserve current pick across file switches
+      fillSelect($(id), data.columns, desired);
+    });
+    note.textContent = `${data.columns.length} columns from ${path.split("/").pop()}.`;
+    note.style.color = "";
+  } catch (e) {
+    // Offline / unreadable: keep the form usable with the known default names.
+    COL_SELECTS.forEach(id => {
+      const cur = $(id).value || DEFAULT_COLS[id];
+      fillSelect($(id), [cur], cur);
+    });
+    note.textContent = "Couldn't read columns from server — using defaults.";
+    note.style.color = "var(--danger)";
+  }
+  render();
+}
+
+async function loadGeodataFiles() {
+  try {
+    const res = await fetch("/api/geodata-files");
+    const data = await res.json();
+    const files = (data.files && data.files.length) ? data.files : [DEFAULT_GEODATA];
+    fillSelect($("geodata_path"), files, DEFAULT_GEODATA);
+  } catch (e) {
+    fillSelect($("geodata_path"), [DEFAULT_GEODATA], DEFAULT_GEODATA);
+    $("geodata_note").textContent = "Server offline — start it to browse data/ files.";
+    $("geodata_note").style.color = "var(--danger)";
+  }
+  await loadColumns();
+}
+$("geodata_path").addEventListener("change", loadColumns);
+
+// ---- load an existing config and prepopulate every field ----
+
+// Select `value` in a <select>, adding the option first if it isn't present
+// (so a config's file/column still shows even if it isn't currently listed).
+function setSelectValue(sel, value) {
+  const v = String(value);
+  if (!Array.from(sel.options).some(o => o.value === v)) {
+    const o = document.createElement("option");
+    o.value = v; o.textContent = v;
+    sel.appendChild(o);
+  }
+  sel.value = v;
+}
+
+function applyMatrix(tbodyId, matrix) {
+  if (!matrix) return;
+  document.querySelectorAll(`input[data-matrix="${tbodyId}"]`).forEach(inp => {
+    const [r, c] = inp.dataset.key.split("|");
+    if (matrix[r] && matrix[r][c] !== undefined) inp.value = matrix[r][c];
+  });
+}
+
+async function applyConfig(cfg) {
+  const setVal = (id, v) => { if (v !== undefined && v !== null) $(id).value = v; };
+
+  // plain scalar fields
+  ["run_name", "seed", "num_reps", "gerrychain_output_dir", "chain_length",
+   "num_subsamples", "epsilon", "total_seats", "num_voters"].forEach(k => setVal(k, cfg[k]));
+
+  // voting rules + district configs (deep-copied so edits don't mutate the load)
+  if (cfg.voting_configs) {
+    votingConfigs = JSON.parse(JSON.stringify(cfg.voting_configs));
+    renderVotingList();
+    renderRuleParams();
+  }
+  if (Array.isArray(cfg.district_configs)) {
+    districtConfigs = JSON.parse(JSON.stringify(cfg.district_configs));
+    renderDistrictList();
+  }
+
+  // slates: map the config's slate keys onto the two slate rows, then rebuild
+  // the slate-dependent widgets (focal group, turnout, matrices) before filling.
+  if (cfg.slate_to_candidates) {
+    const slates = Object.keys(cfg.slate_to_candidates);
+    const nameInputs = Array.from(document.querySelectorAll(".slateName"));
+    nameInputs.forEach((inp, i) => {
+      if (slates[i] === undefined) return;
+      inp.value = slates[i];
+      const cand = document.querySelector(`.slateCands[data-slate="${inp.dataset.slate}"]`);
+      if (cand) cand.value = cfg.slate_to_candidates[slates[i]].join(", ");
+    });
+    if (slates.length > nameInputs.length) {
+      $("load_note").textContent =
+        `Note: this form supports ${nameInputs.length} slates; extra slates in the file were ignored.`;
+    }
+    rebuildSlateDependents();
+  }
+
+  if (cfg.focal_group) setSelectValue($("focal_group"), cfg.focal_group);
+  if (cfg.turnout) {
+    document.querySelectorAll("#turnoutInputs input").forEach(inp => {
+      if (cfg.turnout[inp.dataset.name] !== undefined) inp.value = cfg.turnout[inp.dataset.name];
+    });
+  }
+  applyMatrix("cohesionMatrix", cfg.cohesion_parameters);
+  applyMatrix("alphaMatrix", cfg.alphas);
+
+  // geodata + columns last: pick the file, await its columns, then set columns
+  if (cfg.geodata_path) {
+    setSelectValue($("geodata_path"), cfg.geodata_path);
+    await loadColumns();
+  }
+  COL_SELECTS.forEach(id => { if (cfg[id] !== undefined) setSelectValue($(id), cfg[id]); });
+
+  render();
+}
+
+async function loadConfigList() {
+  try {
+    const res = await fetch("/api/configs");
+    const data = await res.json();
+    const names = data.configs || [];
+    $("load_select").innerHTML = names.length
+      ? names.map(n => `<option value="${n}">${n}</option>`).join("")
+      : '<option value="">(no config files found)</option>';
+  } catch (e) {
+    $("load_select").innerHTML = '<option value="">(server offline)</option>';
+  }
+}
+
+$("load_refresh").onclick = loadConfigList;
+$("load_btn").onclick = async () => {
+  const name = $("load_select").value;
+  const note = $("load_note");
+  if (!name) { note.textContent = "No config selected."; note.style.color = "var(--danger)"; return; }
+  note.style.color = ""; note.textContent = "Loading…";
+  try {
+    const res = await fetch(`/api/config?name=${encodeURIComponent(name)}`);
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.error || "Failed to load.");
+    await applyConfig(data.config);
+    // suggest saving back to the same filename
+    $("filename").value = name.replace(/\.json$/i, "");
+    if (!note.textContent.startsWith("Note:")) {
+      note.textContent = `Loaded ${name}.`;
+      note.style.color = "";
+    }
+  } catch (e) {
+    note.textContent = e.message || "Could not load config.";
+    note.style.color = "var(--danger)";
+  }
+};
+
 // ---- init ----
 rebuildSlateDependents();
 renderRuleParams();
 renderVotingList();
 renderDistrictList();
+loadGeodataFiles();   // async: populates geodata + column selects, then re-renders
+loadConfigList();     // async: populates the "Load Existing Config" dropdown
 render();
 </script>
 </body>
